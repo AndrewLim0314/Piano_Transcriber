@@ -12,7 +12,7 @@ from app.config import get_settings
 settings = get_settings()
 
 # Make the audio_project package importable without requiring a separate install step.
-_AUDIO_PROJECT_SRC = Path(__file__).resolve().parent.parent / "models" / "Audio_project" / "src"
+_AUDIO_PROJECT_SRC = Path(__file__).resolve().parent.parent / "models" / "pytorch" / "src"
 if str(_AUDIO_PROJECT_SRC) not in sys.path:
     sys.path.insert(0, str(_AUDIO_PROJECT_SRC))
 
@@ -75,7 +75,7 @@ class TranscriptionService:
             self._notes_dict_to_midi(notes, midi_path)
 
         self._midi_to_musicxml(midi_path, musicxml_path)
-        pdf_result = self._midi_to_pdf_musescore(midi_path, pdf_path)
+        pdf_result = self._musicxml_to_pdf_musescore(musicxml_path, pdf_path)
 
         return {
             "notes": notes,
@@ -160,10 +160,10 @@ class TranscriptionService:
         new_score.write("musicxml", fp=output_path)
         return output_path
 
-    def _midi_to_pdf_musescore(self, midi_path: str, output_path: str) -> Optional[str]:
+    def _musicxml_to_pdf_musescore(self, musicxml_path: str, output_path: str) -> Optional[str]:
         try:
             subprocess.run(
-                ["mscore", midi_path, "-o", output_path],
+                ["mscore", musicxml_path, "-o", output_path],
                 check=True, capture_output=True, timeout=30,
             )
             return output_path
