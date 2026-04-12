@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from datetime import datetime, UTC  # ← Add UTC here
+from datetime import datetime, timezone
 import json
 
 from app.models.schemas import (
@@ -42,7 +42,7 @@ async def process_transcription_task(
 
         # Update database
         transcription.status = TranscriptionStatusDB.COMPLETED
-        transcription.completed_at = datetime.now(UTC)
+        transcription.completed_at = datetime.now(timezone.utc)
         transcription.midi_path = result['midi_path']
         transcription.musicxml_path = result['musicxml_path']
         transcription.pdf_path = result['pdf_path']

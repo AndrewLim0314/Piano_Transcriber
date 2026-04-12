@@ -264,13 +264,13 @@
       transition: background 0.15s;
     }
 
-    #download-img-btn {
+    #download-midi-btn {
       background: var(--accent);
       color: #0d0d0f;
       border: none;
     }
 
-    #download-img-btn:hover { background: var(--accent-dim); }
+    #download-midi-btn:hover { background: var(--accent-dim); }
 
     #download-pdf-btn {
       background: transparent;
@@ -321,7 +321,7 @@
         <span>Output will appear here</span>
       </div>
       <div class="output-actions">
-        <button id="download-img-btn" type="button">Download PNG</button>
+        <button id="download-midi-btn" type="button">Download MIDI</button>
         <button id="download-pdf-btn" type="button">Download PDF</button>
       </div>
     </div>
@@ -409,39 +409,69 @@
       if (!selectedFile) return;
 
       convertBtn.disabled = true;
-      statusEl.textContent = 'Converting… this may take a moment.';
+      statusEl.textContent = 'Uploading…';
       outputSection.classList.remove('visible');
 
-      // TODO: Replace this block with your actual API call
-      // const formData = new FormData();
-      // formData.append('audio', selectedFile);
-      // const res = await fetch('/api/convert', { method: 'POST', body: formData });
-      // const data = await res.json();
-      // showOutput(data.imageUrl, data.pdfUrl);
+      try {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
 
-      // Placeholder simulation
-      setTimeout(() => {
-        statusEl.textContent = 'Done!';
+        const uploadRes = await fetch('/transcription/upload', { method: 'POST', body: formData });
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({}));
+          throw new Error(err.detail || uploadRes.statusText);
+        }
+        const { id } = await uploadRes.json();
+
+        statusEl.textContent = 'Transcribing… this may take a moment.';
+        const result = await pollUntilDone(id);
+
+        if (result.status === 'completed') {
+          statusEl.textContent = 'Done!';
+          showOutput(result.pdf_url, result.midi_url, result.musicxml_url);
+        } else {
+          statusEl.textContent = 'Transcription failed: ' + (result.error || 'unknown error');
+        }
+      } catch (err) {
+        statusEl.textContent = 'Error: ' + err.message;
+      } finally {
         convertBtn.disabled = false;
-        showOutput(null, null);
-      }, 2000);
+      }
     });
 
-    function showOutput(imageUrl, pdfUrl) {
+    async function pollUntilDone(id) {
+      while (true) {
+        const res = await fetch('/transcription/' + id);
+        if (!res.ok) throw new Error('Status check failed');
+        const data = await res.json();
+        if (data.status === 'completed' || data.status === 'failed') return data;
+        await new Promise(r => setTimeout(r, 2000));
+      }
+    }
+
+    function showOutput(pdfUrl, midiUrl, xmlUrl) {
       outputSection.classList.add('visible');
       const display = document.getElementById('sheet-music-display');
 
-      if (imageUrl) {
-        display.innerHTML = `<img src="${imageUrl}" alt="Sheet music output" />`;
+      if (pdfUrl) {
+        display.innerHTML = `<embed src="${pdfUrl}" type="application/pdf" width="100%" height="500" style="border-radius:8px" />`;
+      } else if (xmlUrl) {
+        display.innerHTML = `<span style="color:#aaa">PDF unavailable — download MusicXML below.</span>`;
       } else {
-        display.innerHTML = `<span style="color:#aaa">Sheet music will appear here once backend is connected.</span>`;
+        display.innerHTML = `<span style="color:#aaa">No output available.</span>`;
       }
 
-      document.getElementById('download-img-btn').onclick = () => {
-        if (imageUrl) { const a = document.createElement('a'); a.href = imageUrl; a.download = 'sheet-music.png'; a.click(); }
+      document.getElementById('download-midi-btn').onclick = () => {
+        if (!midiUrl) return;
+        const a = document.createElement('a'); a.href = midiUrl; a.download = 'transcription.mid'; a.click();
       };
       document.getElementById('download-pdf-btn').onclick = () => {
-        if (pdfUrl) { const a = document.createElement('a'); a.href = pdfUrl; a.download = 'sheet-music.pdf'; a.click(); }
+        const url = pdfUrl || xmlUrl;
+        if (!url) return;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = pdfUrl ? 'sheet-music.pdf' : 'sheet-music.musicxml';
+        a.click();
       };
     }
   </script>

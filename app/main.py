@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
@@ -44,10 +47,9 @@ app.include_router(health.router)
 app.include_router(transcription.router)
 
 
+_INDEX_HTML = Path(__file__).resolve().parent.parent / "index.html"
+
+
 @app.get("/")
 async def root():
-    return {
-        "message": "Music Transcription API",
-        "docs": "/docs",
-        "health": "/health"
-    }
+    return FileResponse(_INDEX_HTML)
