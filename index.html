@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audio to Sheet Music</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #18181c;
+      --border: #2e2e36;
+      --accent: #c8f060;
+      --accent-dim: #a8d040;
+      --text: #f0efe8;
+      --muted: #88877f;
+      --danger: #e05a4a;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 3rem 1.5rem 5rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+
+    header h1 span {
+      color: var(--accent);
+    }
+
+    header p {
+      margin-top: 0.75rem;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 640px;
+      margin-bottom: 1.5rem;
+    }
+
+    .card h2 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.25rem;
+      font-weight: 400;
+      margin-bottom: 1.25rem;
+      color: var(--text);
+    }
+
+    /* Drop Zone */
+    #drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      position: relative;
+    }
+
+    #drop-zone:hover, #drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(200, 240, 96, 0.04);
+    }
+
+    #drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    #drop-zone .icon {
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+    }
+
+    #drop-zone p {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    #drop-zone strong {
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    #file-name {
+      margin-top: 1rem;
+      font-size: 0.875rem;
+      color: var(--accent);
+      min-height: 1.2em;
+    }
+
+    /* Divider */
+    .or-divider {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 1.5rem 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .or-divider::before,
+    .or-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Record button */
+    #record-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 0.875rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    #record-btn:hover {
+      border-color: var(--accent);
+      background: rgba(200, 240, 96, 0.04);
+    }
+
+    #record-btn.recording {
+      border-color: var(--danger);
+      color: var(--danger);
+      background: rgba(224, 90, 74, 0.06);
+    }
+
+    .rec-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--danger);
+    }
+
+    #record-btn.recording .rec-dot {
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    #record-timer {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 0.6rem;
+      text-align: center;
+      min-height: 1.2em;
+    }
+
+    /* Submit */
+    #convert-btn {
+      width: 100%;
+      max-width: 640px;
+      padding: 1rem;
+      background: var(--accent);
+      color: #0d0d0f;
+      border: none;
+      border-radius: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      margin-bottom: 1.5rem;
+    }
+
+    #convert-btn:hover { background: var(--accent-dim); }
+    #convert-btn:active { transform: scale(0.99); }
+    #convert-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Status */
+    #status {
+      font-size: 0.875rem;
+      color: var(--muted);
+      text-align: center;
+      margin-bottom: 1.5rem;
+      min-height: 1.2em;
+    }
+
+    /* Output */
+    #output-section {
+      width: 100%;
+      max-width: 640px;
+      display: none;
+    }
+
+    #output-section.visible { display: block; }
+
+    #sheet-music-display {
+      background: #fff;
+      border-radius: 12px;
+      min-height: 300px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #aaa;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    #sheet-music-display img {
+      width: 100%;
+      border-radius: 12px;
+    }
+
+    .output-actions {
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .output-actions a, .output-actions button {
+      flex: 1;
+      padding: 0.75rem;
+      border-radius: 10px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+
+    #download-img-btn {
+      background: var(--accent);
+      color: #0d0d0f;
+      border: none;
+    }
+
+    #download-img-btn:hover { background: var(--accent-dim); }
+
+    #download-pdf-btn {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    #download-pdf-btn:hover { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Audio to <span>Sheet Music</span></h1>
+    <p>Upload or record audio — we'll transcribe it into sheet music.</p>
+  </header>
+
+  <!-- Upload Card -->
+  <div class="card">
+    <h2>Upload audio</h2>
+    <div id="drop-zone">
+      <input type="file" id="file-input" accept="audio/*" />
+      <div class="icon">🎵</div>
+      <p><strong>Click to browse</strong> or drag and drop</p>
+      <p>MP3, WAV, M4A, OGG — up to 50 MB</p>
+    </div>
+    <div id="file-name"></div>
+
+    <div class="or-divider">or</div>
+
+    <button id="record-btn" type="button">
+      <span class="rec-dot"></span>
+      <span id="record-label">Record from microphone</span>
+    </button>
+    <div id="record-timer"></div>
+  </div>
+
+  <!-- Convert -->
+  <button id="convert-btn" disabled>Convert to sheet music</button>
+  <div id="status"></div>
+
+  <!-- Output -->
+  <div id="output-section">
+    <div class="card">
+      <h2>Sheet music</h2>
+      <div id="sheet-music-display">
+        <!-- Sheet music image or embed will appear here -->
+        <span>Output will appear here</span>
+      </div>
+      <div class="output-actions">
+        <button id="download-img-btn" type="button">Download PNG</button>
+        <button id="download-pdf-btn" type="button">Download PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+    const fileNameEl = document.getElementById('file-name');
+    const recordBtn = document.getElementById('record-btn');
+    const recordLabel = document.getElementById('record-label');
+    const recordTimer = document.getElementById('record-timer');
+    const convertBtn = document.getElementById('convert-btn');
+    const statusEl = document.getElementById('status');
+    const outputSection = document.getElementById('output-section');
+
+    let selectedFile = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordingInterval = null;
+    let recordingSeconds = 0;
+
+    // --- File upload ---
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) selectFile(fileInput.files[0]);
+    });
+
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) selectFile(e.dataTransfer.files[0]);
+    });
+
+    function selectFile(file) {
+      selectedFile = file;
+      fileNameEl.textContent = `Selected: ${file.name}`;
+      convertBtn.disabled = false;
+      statusEl.textContent = '';
+    }
+
+    // --- Recording ---
+    recordBtn.addEventListener('click', async () => {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        recordedChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+          stream.getTracks().forEach(t => t.stop());
+          clearInterval(recordingInterval);
+          const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+          selectedFile = new File([blob], 'recording.webm', { type: 'audio/webm' });
+          fileNameEl.textContent = `Recorded: ${recordingSeconds}s of audio`;
+          convertBtn.disabled = false;
+          recordBtn.classList.remove('recording');
+          recordLabel.textContent = 'Record from microphone';
+          recordTimer.textContent = '';
+        };
+
+        mediaRecorder.start();
+        recordBtn.classList.add('recording');
+        recordLabel.textContent = 'Stop recording';
+        recordingSeconds = 0;
+        recordTimer.textContent = '0s';
+        recordingInterval = setInterval(() => {
+          recordingSeconds++;
+          recordTimer.textContent = `${recordingSeconds}s`;
+        }, 1000);
+
+      } catch (err) {
+        statusEl.textContent = 'Microphone access denied.';
+      }
+    });
+
+    // --- Convert ---
+    convertBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      convertBtn.disabled = true;
+      statusEl.textContent = 'Converting… this may take a moment.';
+      outputSection.classList.remove('visible');
+
+      // TODO: Replace this block with your actual API call
+      // const formData = new FormData();
+      // formData.append('audio', selectedFile);
+      // const res = await fetch('/api/convert', { method: 'POST', body: formData });
+      // const data = await res.json();
+      // showOutput(data.imageUrl, data.pdfUrl);
+
+      // Placeholder simulation
+      setTimeout(() => {
+        statusEl.textContent = 'Done!';
+        convertBtn.disabled = false;
+        showOutput(null, null);
+      }, 2000);
+    });
+
+    function showOutput(imageUrl, pdfUrl) {
+      outputSection.classList.add('visible');
+      const display = document.getElementById('sheet-music-display');
+
+      if (imageUrl) {
+        display.innerHTML = `<img src="${imageUrl}" alt="Sheet music output" />`;
+      } else {
+        display.innerHTML = `<span style="color:#aaa">Sheet music will appear here once backend is connected.</span>`;
+      }
+
+      document.getElementById('download-img-btn').onclick = () => {
+        if (imageUrl) { const a = document.createElement('a'); a.href = imageUrl; a.download = 'sheet-music.png'; a.click(); }
+      };
+      document.getElementById('download-pdf-btn').onclick = () => {
+        if (pdfUrl) { const a = document.createElement('a'); a.href = pdfUrl; a.download = 'sheet-music.pdf'; a.click(); }
+      };
+    }
+  </script>
+
+</body>
+</html>
