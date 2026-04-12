@@ -1,0 +1,80 @@
+[
+  {
+    "pitch": 52,
+    "start_time": 0.096,
+    "end_time": 4.016,
+    "velocity": 64
+  },
+  {
+    "pitch": 84,
+    "start_time": 0.096,
+    "end_time": 1.2,
+    "velocity": 64
+  },
+  {
+    "pitch": 55,
+    "start_time": 0.112,
+    "end_time": 4.016,
+    "velocity": 64
+  },
+  {
+    "pitch": 59,
+    "start_time": 0.112,
+    "end_time": 4.016,
+    "velocity": 64
+  },
+  {
+    "pitch": 61,
+    "start_time": 0.112,
+    "end_time": 4.016,
+    "velocity": 64
+  },
+  {
+    "pitch": 67,
+    "start_time": 0.112,
+    "end_time": 4.016,
+    "velocity": 64
+  },
+  {
+    "pitch": 49,
+    "start_time": 0.528,
+    "end_time": 4.016,
+    "velocity": 64
+  },
+  {
+    "pitch": 64,
+    "start_time": 0.528,
+    "end_time": 4.016,
+    "velocity": 64
+  },
+  {
+    "pitch": 68,
+    "start_time": 0.528,
+    "end_time": 4.016,
+    "velocity": 64
+  },
+  {
+    "pitch": 60,
+    "start_time": 0.64,
+    "end_time": 4.016,
+    "velocity": 64
+  },
+  {
+    "pitch": 51,
+    "start_time": 1.296,
+    "end_time": 4.016,
+    "velocity": 64
+  },
+  {
+    "pitch": 75,
+    "start_time": 1.296,
+    "end_time": 4.016,
+    "velocity": 64
+  },
+  {
+    "pitch": 66,
+    "start_time": 2.592,
+    "end_time": 4.016,
+    "velocity": 64
+  }
+]

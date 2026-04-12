@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -17,6 +18,10 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     allowed_audio_formats: list = [".mp3", ".wav", ".ogg", ".flac", ".m4a"]
+
+    # Path to a trained OnsetFrameModel checkpoint (.pt file).
+    # When set, the neural transcription engine is used instead of librosa.
+    neural_model_checkpoint: Optional[str] = None
 
     class Config:
         env_file = ".env"

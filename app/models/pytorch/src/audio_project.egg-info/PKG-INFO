@@ -1,0 +1,136 @@
+Metadata-Version: 2.4
+Name: audio-project
+Version: 0.1.0
+Summary: PyTorch automatic music transcription baseline.
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: matplotlib>=3.8
+Requires-Dist: mido>=1.3
+Requires-Dist: soundfile>=0.12
+Requires-Dist: torch>=2.2
+Requires-Dist: torchaudio>=2.2
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+
+# Audio Transcription Project
+
+This repository is the starting point for a PyTorch-based automatic music transcription system: audio in, symbolic note output out.
+
+The target is not speech-to-text. The target is music-to-notes, with a practical MVP focused on piano-first transcription.
+
+## MVP technical direction
+
+The first model is intentionally narrow and buildable:
+
+- input: waveform audio
+- features: log-mel spectrograms from `torchaudio`
+- supervision: aligned MIDI files
+- outputs: onset probabilities and frame activity probabilities for the 88 piano keys
+- decoder: note-event extraction from onset/frame predictions
+- symbolic result: note events now, MIDI export next, MusicXML later
+
+Why this baseline:
+
+- it matches the structure of the problem better than text-token decoding
+- it is a standard and defensible AMT baseline
+- it can be trained on datasets such as MAESTRO
+- it gives a clean path to later upgrades such as Onsets and Frames variants, Conformers, or diffusion-assisted symbolic cleanup
+
+## Project layout
+
+```text
+docs/                    architecture and implementation notes
+src/audio_project/       application package
+src/audio_project/data/  dataset, MIDI parsing, audio transforms
+src/audio_project/models/model definitions
+src/audio_project/training/training loop and config wiring
+src/audio_project/inference/ offline transcription and note decoding
+```
+
+## Suggested build phases
+
+1. Baseline MVP
+   - train an onset/frame model on aligned audio + MIDI
+   - decode note events locally
+   - evaluate note precision, recall, and F1
+2. Quality improvements
+   - stronger encoder such as a Conformer or U-Net style temporal stack
+   - velocity estimation and sustain pedal handling
+   - better note decoding and score cleanup
+3. Integration handoff
+   - package model loading and note decoding cleanly for the backend team
+   - define artifact format and preprocessing contract
+   - document the symbolic output format for the website team
+
+## Example training dataset format
+
+Use a JSONL manifest with one sample per line:
+
+```json
+{"audio_path": "data/audio/performance_001.wav", "midi_path": "data/midi/performance_001.mid"}
+{"audio_path": "data/audio/performance_002.wav", "midi_path": "data/midi/performance_002.mid"}
+```
+
+## Getting started
+
+1. Create a virtual environment.
+2. Install the package in editable mode with the dependencies from `pyproject.toml`.
+3. Prepare `train.jsonl`, `valid.jsonl`, and `test.jsonl` manifests from aligned audio and MIDI.
+4. Run the training entrypoint.
+5. Decode note events from a checkpoint and hand the artifact contract to the backend team.
+
+Each training run now writes:
+
+- checkpoints
+- `history.json`
+- `history.csv`
+- `training_summary.png` with loss, onset F1, frame F1, and frame accuracy curves
+
+## Useful commands
+
+Train on the larger synthetic dataset:
+
+```bash
+MPLCONFIGDIR=/tmp/matplotlib PYTHONPATH=src python -m audio_project.training.train \
+  --device cpu \
+  --epochs 6 \
+  --batch-size 8 \
+  --learning-rate 0.001 \
+  --min-learning-rate 0.0001 \
+  --train-manifest data/synthetic_piano_large/manifests/train.jsonl \
+  --valid-manifest data/synthetic_piano_large/manifests/valid.jsonl \
+  --checkpoint-dir artifacts/synthetic_run_eval_ready
+```
+
+Transcribe an audio file to JSON and MIDI:
+
+```bash
+PYTHONPATH=src python scripts/transcribe_audio.py \
+  --audio data/synthetic_piano_large/valid/audio/valid_0000.wav \
+  --checkpoint artifacts/synthetic_run_eval_ready/music_transcription_epoch_006.pt \
+  --onset-threshold 0.2 \
+  --frame-threshold 0.35 \
+  --min-note-duration 0.04 \
+  --json-out artifacts/sample_transcription.json \
+  --midi-out artifacts/sample_transcription.mid
+```
+
+Evaluate a checkpoint with note-level metrics and diagnostic images:
+
+```bash
+MPLCONFIGDIR=/tmp/matplotlib PYTHONPATH=src python scripts/evaluate_checkpoint.py \
+  --checkpoint artifacts/synthetic_run_eval_ready/music_transcription_epoch_006.pt \
+  --manifest data/synthetic_piano_large/manifests/valid.jsonl \
+  --output-dir artifacts/synthetic_run_eval_ready/note_eval \
+  --sample-limit 16
+```
+
+## Immediate next steps
+
+- decide whether the MVP is piano-only or broader instrumentation
+- start with a piano dataset such as MAESTRO rather than arbitrary web scraping
+- train the baseline model and measure note-level F1
+- align checkpoint loading and symbolic output format with the backend team
+
+See [docs/architecture.md](/Users/melissa/Documents/Audio_project/docs/architecture.md) for the technical design.
+See [docs/data.md](/Users/melissa/Documents/Audio_project/docs/data.md) for dataset preparation.

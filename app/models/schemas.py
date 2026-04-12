@@ -19,7 +19,9 @@ class TranscriptionRequest(BaseModel):
 
 class Note(BaseModel):
     pitch: str
+    midi_number: Optional[int] = None
     start_time: float
+    end_time: Optional[float] = None
     duration: float
     velocity: int
 
